@@ -20,7 +20,6 @@ if __name__ == '__main__':
 	train, test = Dataset.fetch(args.dataset)
 	
 	classifier.fit(train)
-	classifier.evaluate(test)
+	true_predictions, total = classifier.evaluate(test)
 
-
-
+	print('Accuracy: {}'.format(true_predictions / total))

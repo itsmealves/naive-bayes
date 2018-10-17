@@ -47,11 +47,26 @@ class NaiveBayesClassifier(object):
 				self.__set_conditional_parameter(class_id, feature, dataframe)
 
 	def evaluate(self, dataframe):
-		for index, sample in dataframe.iterrows():
-			print(self.predict(sample))
+		true_predictions = 0
+		num_rows = dataframe.iloc[:,0].count()
+
+		for i in range(num_rows):
+			sample = dataframe.iloc[i,:]
+			unclassified = dataframe.iloc[i,:-1]
+
+			prediction, probabilities = self.predict(unclassified)
+
+			if prediction == sample.iloc[-1]:
+				true_predictions += 1
+
+		return float(true_predictions), float(num_rows)
+
+
 
 	def predict(self, sample):
 		result = {}
+		max_probability = 0
+		max_probability_class = None
 
 		for class_id in self.__class_parameters:
 			r = 1		# Probability of X
@@ -67,4 +82,8 @@ class NaiveBayesClassifier(object):
 			t = self.__class_parameters[class_id]  # Probability of class
 			result[class_id] = (t * s) / r   # Bayes theorem, calculating probability of class given X
 
-		return result
+			if result[class_id] > max_probability:
+				max_probability = result[class_id]
+				max_probability_class = class_id
+
+		return max_probability_class, result
