@@ -16,7 +16,8 @@ class NaiveBayesClassifier(object):
 
 	def __set_class_parameter(self, class_id, dataframe):
 		# Get sample probability for this class_id
-		rows = dataframe[dataframe.iloc[:,-1].str.match(class_id)]
+		class_columns = dataframe[dataframe.iloc[:,-1].astype('str')
+		rows = class_columns.str.match(str(class_id))]
 		rows_count = float(rows.iloc[:,0].count())
 		dataframe_count = float(dataframe.iloc[:,0].count())
 
