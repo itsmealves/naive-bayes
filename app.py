@@ -35,3 +35,9 @@ if __name__ == '__main__':
 	std_dev = mat.std()
 
 	print('Accuracy: {} {}'.format(mean, std_dev))
+
+	print('Here we have samples of each class:')
+	for class_id in classifier.classes():
+		print('For ' + str(class_id))
+		print(classifier.abduct(class_id))
+		print('****')

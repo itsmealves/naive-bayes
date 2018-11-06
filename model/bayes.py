@@ -1,7 +1,11 @@
 import numpy as np
+import pandas as pd
+from model.pso import ParticleSwarmOptimization
 
 class NaiveBayesClassifier(object):
 	def __init__(self, probability_method=None):
+		np.seterr(all='ignore')
+
 		# For class probabilities storage
 		self.__class_parameters = {}
 
@@ -34,11 +38,15 @@ class NaiveBayesClassifier(object):
 		parameters = self.__probability_method.get(frame)
 		self.__conditional_parameters[class_id][feature] = parameters
 
+	def classes(self):
+		return self.__classes
 
 	def fit(self, dataframe):
-		classes = dataframe.iloc[:,-1].unique()
+		self.__classes = dataframe.iloc[:,-1].unique()
+		self.__labels = dataframe.iloc[:,0:-1].columns
+		self.__dimensions = len(dataframe.columns) - 1
 
-		for class_id in classes:
+		for class_id in self.__classes:
 			self.__conditional_parameters[class_id] = {}
 			self.__set_class_parameter(class_id, dataframe)
 
@@ -62,28 +70,53 @@ class NaiveBayesClassifier(object):
 		return float(true_predictions), float(num_rows)
 
 
+	def abduct(self, class_id):
+		def optimization_function(x):
+			dataframe = pd.Series(data=x, index=self.__labels)
+			return self.__inverse_run(class_id, dataframe)
+
+		pso = ParticleSwarmOptimization(dimensions=self.__dimensions)
+		sample, value = pso.optimize(objective_function=optimization_function)
+		
+		return pd.Series(data=sample, index=self.__labels)
+
+	def __inverse_run(self, class_id, sample):
+		r = 1		# Probability of X
+
+		for feature in sample.index:
+			p1 = self.__feature_parameters[feature]
+			r = r * self.__probability_method.calculate(p1, sample[feature])
+
+		s = self.__run(class_id, sample)		# Conditional probability of class given X
+		t = self.__class_parameters[class_id]  	# Probability of class
+		return (r * s) / t   # Bayes theorem, calculating probability of class given X
+
+	def __run(self, class_id, sample):
+		r = 1		# Probability of X
+		s = 1		# Conditional probability of X given class
+
+		for feature in sample.index:
+			p1 = self.__feature_parameters[feature]
+			p2 = self.__conditional_parameters[class_id][feature]
+
+			r = r * self.__probability_method.calculate(p1, sample[feature])
+			s = s * self.__probability_method.calculate(p2, sample[feature])
+
+		t = self.__class_parameters[class_id]  # Probability of class
+		return (t * s) / r   # Bayes theorem, calculating probability of class given X
 
 	def predict(self, sample):
 		result = {}
 		max_probability = 0
 		max_probability_class = None
 
-		for class_id in self.__class_parameters:
-			r = 1		# Probability of X
-			s = 1		# Conditional probability of X given class
+		for class_id in self.__classes:
+			result[class_id] = self.__run(class_id, sample)
 
-			for feature in sample.index:
-				p1 = self.__feature_parameters[feature]
-				p2 = self.__conditional_parameters[class_id][feature]
-
-				r = r * self.__probability_method.calculate(p1, sample[feature])
-				s = s * self.__probability_method.calculate(p2, sample[feature])
-
-			t = self.__class_parameters[class_id]  # Probability of class
-			result[class_id] = (t * s) / r   # Bayes theorem, calculating probability of class given X
-
+			# argmax: checking for which class the input gives a higher output
 			if result[class_id] > max_probability:
 				max_probability = result[class_id]
 				max_probability_class = class_id
 
+		# return the classification output and the probability for each class
 		return max_probability_class, result
