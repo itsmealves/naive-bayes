@@ -39,7 +39,7 @@ class NaiveBayesClassifier(object):
 		self.__conditional_parameters[class_id][feature] = parameters
 
 	def classes(self):
-		return self.__classes
+		return sorted(self.__classes)
 
 	def fit(self, dataframe):
 		self.__classes = dataframe.iloc[:,-1].unique()
