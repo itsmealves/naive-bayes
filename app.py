@@ -4,13 +4,16 @@ import numpy as np
 from data.dataset import Dataset
 from model.bayes import NaiveBayesClassifier
 from data.probability import ProbabilityMethodFactory
+from data.scaling import ScalingMethodFactory
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('dataset', help='Path for a .csv file containing the dataset')
 parser.add_argument('-f', '--features', help='Feature filter for the dataset',
 					nargs='+', type=int, default=None)
-parser.add_argument('-s', '--samples', help='Number of samples to enable statistical analysis',
+parser.add_argument('-s', '--scaler', help='Determine which method of scaling do you want to apply',
+					choices=ScalingMethodFactory.values(), default=None)
+parser.add_argument('-n', '--samples', help='Number of samples to enable statistical analysis',
 					type=int, default=30)
 parser.add_argument('probability_method',
 					choices=ProbabilityMethodFactory.values(),
@@ -19,12 +22,13 @@ parser.add_argument('probability_method',
 args = parser.parse_args()
 
 if __name__ == '__main__':
+	scaling_method = ScalingMethodFactory.build(args.scaler)
 	probability_method = ProbabilityMethodFactory.build(args.probability_method)
 	classifier = NaiveBayesClassifier(probability_method)
 
 	accuracy_list = []
 	for i in range(args.samples):
-		train, test = Dataset.fetch(args.dataset, args.features)
+		train, test = Dataset.fetch(args.dataset, scaling_method, args.features)
 
 		classifier.fit(train)
 		true_predictions, total = classifier.evaluate(test)
