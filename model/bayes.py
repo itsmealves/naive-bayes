@@ -1,5 +1,7 @@
+import sys
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import mahalanobis, euclidean
 from model.pso import ParticleSwarmOptimization
 
 class NaiveBayesClassifier(object):
@@ -65,6 +67,32 @@ class NaiveBayesClassifier(object):
 			prediction, probabilities = self.predict(unclassified)
 
 			if prediction == sample.iloc[-1]:
+				true_predictions += 1
+
+		return float(true_predictions), float(num_rows)
+
+
+	def evaluate_abduction(self, train, test):
+		true_predictions = 0
+		num_rows = test.iloc[:,0].count()
+		cov = np.linalg.inv(train.iloc[:,:-1].cov())
+
+		x = {}
+		for class_id in self.__classes:
+			x[str(class_id)] = self.abduct(class_id)
+
+		for i in range(num_rows):
+			min_dist = (0, sys.maxsize)
+			sample = test.iloc[i,:]
+			unclassified = test.iloc[i,:-1]
+			true_class = sample.iloc[-1]
+
+			for class_id in x:
+				distance = mahalanobis(unclassified, x[class_id], cov)
+				if distance < min_dist[1]:
+					min_dist = (int(class_id), distance)
+
+			if true_class == int(min_dist[0]):
 				true_predictions += 1
 
 		return float(true_predictions), float(num_rows)

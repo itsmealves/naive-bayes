@@ -43,36 +43,17 @@ if __name__ == '__main__':
 
 	print('Accuracy: {} {}'.format(mean, std_dev))
 
-	print('Here we have generated samples of each class:')
-	for class_id in classifier.classes():
-		abductions[class_id] = classifier.abduct(class_id)
+	accuracy_list = []
+	for i in range(args.samples):
+		train, test = Dataset.fetch(args.dataset, scaling_method, args.features)
 
-		print('For ' + str(class_id))
-		print(abductions[class_id])
-		print('****')
+		classifier.fit(train)
+		true_predictions, total = classifier.evaluate_abduction(train, test)
+		accuracy_list.append(true_predictions / total)
 
-	num_rows = test.iloc[:,0].count()
+	mat = np.array(accuracy_list)
+	mean = mat.mean()
+	std_dev = mat.std()
 
-	def distance(a, b):
-		d = 0
-
-		for feature in a.index:
-			d += (a[feature] - b[feature]) ** 2
-
-		return math.sqrt(d)
-
-	for i in range(num_rows):
-		min_distance = (0, sys.maxsize)
-		sample = test.iloc[i,:]
-		unclassified = test.iloc[i,:-1]
-
-		for class_id in abductions:
-			d = distance(unclassified, abductions[class_id])
-			if d < min_distance[1]:
-				min_distance = (class_id, d)
-
-		print(sample.iloc[-1], min_distance[0])
-		print(sample)
-		print(abductions[min_distance[0]])
-
+	print('Accuracy: {} {}'.format(mean, std_dev))
 
