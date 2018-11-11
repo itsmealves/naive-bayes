@@ -1,3 +1,5 @@
+import sys
+import math
 import argparse
 import numpy as np
 
@@ -22,6 +24,7 @@ parser.add_argument('probability_method',
 args = parser.parse_args()
 
 if __name__ == '__main__':
+	abductions = {}
 	scaling_method = ScalingMethodFactory.build(args.scaler)
 	probability_method = ProbabilityMethodFactory.build(args.probability_method)
 	classifier = NaiveBayesClassifier(probability_method)
@@ -40,8 +43,36 @@ if __name__ == '__main__':
 
 	print('Accuracy: {} {}'.format(mean, std_dev))
 
-	print('Here we have samples of each class:')
+	print('Here we have generated samples of each class:')
 	for class_id in classifier.classes():
+		abductions[class_id] = classifier.abduct(class_id)
+
 		print('For ' + str(class_id))
-		print(classifier.abduct(class_id))
+		print(abductions[class_id])
 		print('****')
+
+	num_rows = test.iloc[:,0].count()
+
+	def distance(a, b):
+		d = 0
+
+		for feature in a.index:
+			d += (a[feature] - b[feature]) ** 2
+
+		return math.sqrt(d)
+
+	for i in range(num_rows):
+		min_distance = (0, sys.maxsize)
+		sample = test.iloc[i,:]
+		unclassified = test.iloc[i,:-1]
+
+		for class_id in abductions:
+			d = distance(unclassified, abductions[class_id])
+			if d < min_distance[1]:
+				min_distance = (class_id, d)
+
+		print(sample.iloc[-1], min_distance[0])
+		print(sample)
+		print(abductions[min_distance[0]])
+
+

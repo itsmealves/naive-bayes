@@ -73,7 +73,15 @@ class NaiveBayesClassifier(object):
 	def abduct(self, class_id):
 		def optimization_function(x):
 			dataframe = pd.Series(data=x, index=self.__labels)
-			return self.__inverse_run(class_id, dataframe)
+			
+			other_classes = 0
+			target = self.__inverse_run(class_id, dataframe)
+			other_classes_id = filter(lambda x: x != class_id, self.__classes)
+
+			for other_class_id in other_classes_id:
+				other_classes += self.__inverse_run(other_class_id, dataframe)
+
+			return target - other_classes
 
 		pso = ParticleSwarmOptimization(dimensions=self.__dimensions)
 		sample, value = pso.optimize(objective_function=optimization_function)
