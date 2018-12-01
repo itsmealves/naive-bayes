@@ -75,7 +75,7 @@ class NaiveBayesClassifier(object):
 	def evaluate_abduction(self, train, test):
 		true_predictions = 0
 		num_rows = test.iloc[:,0].count()
-		cov = np.linalg.inv(train.iloc[:,:-1].cov())
+		# cov = np.linalg.inv(train.iloc[:,:-1].cov())
 
 		x = {}
 		for class_id in self.__classes:
@@ -84,16 +84,19 @@ class NaiveBayesClassifier(object):
 		for i in range(num_rows):
 			min_dist = (0, sys.maxsize)
 			sample = test.iloc[i,:]
-			unclassified = test.iloc[i,:-1]
+			unclassified = test.iloc[i,:-2]
+			false_class = sample.iloc[-2]
 			true_class = sample.iloc[-1]
 
 			for class_id in x:
-				distance = mahalanobis(unclassified, x[class_id], cov)
+				# distance = mahalanobis(unclassified, x[class_id], cov)
+				distance = euclidean(unclassified, x[class_id])
 				if distance < min_dist[1]:
 					min_dist = (int(class_id), distance)
 
 			if true_class == int(min_dist[0]):
 				true_predictions += 1
+				print(false_class, true_class, min_dist[0])
 
 		return float(true_predictions), float(num_rows)
 
@@ -112,7 +115,7 @@ class NaiveBayesClassifier(object):
 			return target - other_classes
 
 		pso = ParticleSwarmOptimization(dimensions=self.__dimensions)
-		sample, value = pso.optimize(objective_function=optimization_function)
+		sample, _ = pso.optimize(objective_function=optimization_function)
 		
 		return pd.Series(data=sample, index=self.__labels)
 

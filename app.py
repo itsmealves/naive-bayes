@@ -13,6 +13,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('dataset', help='Path for a .csv file containing the dataset')
 parser.add_argument('-f', '--features', help='Feature filter for the dataset',
 					nargs='+', type=int, default=None)
+parser.add_argument('-e', '--exclude-classification', help='Remove columns for the classification experiment',
+					nargs='+', type=int, default=None)
+parser.add_argument('-a', '--exclude-abduction', help='Remove columns for the abduction experiment',
+					nargs='+', type=int, default=None)
+parser.add_argument('-b', '--exclude-abduction_test', help='Remove columns for the abduction experiment (test dataset)',
+					nargs='+', type=int, default=None)
 parser.add_argument('-s', '--scaler', help='Determine which method of scaling do you want to apply',
 					choices=ScalingMethodFactory.values(), default=None)
 parser.add_argument('-n', '--samples', help='Number of samples to enable statistical analysis',
@@ -23,37 +29,38 @@ parser.add_argument('probability_method',
 
 args = parser.parse_args()
 
+def statistics(fn, samples):
+	values = []
+	for i in range(samples):
+		values.append(fn(i))
+
+	mat = np.array(values)
+	return mat.mean(), mat.std()
+
 if __name__ == '__main__':
-	abductions = {}
 	scaling_method = ScalingMethodFactory.build(args.scaler)
 	probability_method = ProbabilityMethodFactory.build(args.probability_method)
-	classifier = NaiveBayesClassifier(probability_method)
 
-	accuracy_list = []
-	for i in range(args.samples):
-		train, test = Dataset.fetch(args.dataset, scaling_method, args.features)
+	def classification(index):
+		train, test = Dataset.fetch(args.dataset, scaling_method, args.features, args.exclude_classification, args.exclude_classification)
 
+		classifier = NaiveBayesClassifier(probability_method)
 		classifier.fit(train)
 		true_predictions, total = classifier.evaluate(test)
-		accuracy_list.append(true_predictions / total)
 
-	mat = np.array(accuracy_list)
-	mean = mat.mean()
-	std_dev = mat.std()
+		return true_predictions / total
 
-	print('Accuracy: {} {}'.format(mean, std_dev))
+	def abduction(index):
+		train, test = Dataset.fetch(args.dataset, scaling_method, args.features, args.exclude_abduction, args.exclude_abduction_test)
 
-	accuracy_list = []
-	for i in range(args.samples):
-		train, test = Dataset.fetch(args.dataset, scaling_method, args.features)
-
+		classifier = NaiveBayesClassifier(probability_method)
 		classifier.fit(train)
 		true_predictions, total = classifier.evaluate_abduction(train, test)
-		accuracy_list.append(true_predictions / total)
 
-	mat = np.array(accuracy_list)
-	mean = mat.mean()
-	std_dev = mat.std()
+		return true_predictions / total
 
-	print('Accuracy: {} {}'.format(mean, std_dev))
+				
+	print('Accuracy: {} {}'.format(*statistics(classification, args.samples)))
+	print('Accuracy: {} {}'.format(*statistics(abduction, args.samples)))
+
 

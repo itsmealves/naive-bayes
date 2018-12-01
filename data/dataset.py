@@ -3,7 +3,7 @@ import pandas as pd
 
 class Dataset(object):
 	@staticmethod
-	def fetch(path, scaling_method=None, features=None, split_proportion=0.7):
+	def fetch(path, scaling_method=None, features=None, exclude_train=None, exclude_test=None, split_proportion=0.7):
 		dataset = pd.read_csv(path)
 
 		if scaling_method is not None:
@@ -23,5 +23,10 @@ class Dataset(object):
 		else:
 			train = randomized.iloc[0:split_size,:]
 			test = randomized.iloc[split_size:,:]
+
+		if exclude_train is not None:
+			train = train.drop(train.columns[exclude_train], axis=1)
+		if exclude_test is not None:
+			test = test.drop(test.columns[exclude_test], axis=1)
 
 		return train, test
