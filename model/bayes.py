@@ -81,8 +81,6 @@ class NaiveBayesClassifier(object):
 	for class_id in self.__classes:
 	    x[str(class_id)] = self.abduct(class_id)
 
-        print(x)
-
 	for i in range(num_rows):
 	    min_dist = (0, sys.maxsize)
 	    sample = test.iloc[i,:]

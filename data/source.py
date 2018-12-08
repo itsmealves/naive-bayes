@@ -64,7 +64,7 @@ class Jain(Source):
 
 class MislabeledJain(Source):
     delimiter = '\t'    
-    url = 'https://www.dropbox.com/s/neahy1hq971qa0f/mislabeled-jain.txt?dl=1'
+    url = 'https://www.dropbox.com/s/sqaacjc27ehfssl/mislabeled-jain.txt?dl=1'
 
 class Iris(Source):
     delimiter = ','
@@ -73,6 +73,14 @@ class Iris(Source):
 class MislabeledIris(Source):
     delimiter = ','
     url = 'https://www.dropbox.com/s/whezliw9a4efrx2/mislabeled-iris.data?dl=1'
+
+class Wine(Source):
+    delimiter = ','
+    url = 'https://www.dropbox.com/s/4liqqz9fo3ih2fn/wine.data?dl=1'
+
+class MislabeledWine(Source):
+    delimiter = ','
+    url = 'https://www.dropbox.com/s/pnmrgr8r69p006n/mislabeled-wine.data?dl=1'
 
 class SourceFactory(object):
     @staticmethod
