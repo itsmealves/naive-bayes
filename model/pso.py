@@ -4,7 +4,7 @@ class ParticleSwarmOptimization(object):
     class __Particle(object):
         def __init__(self, dimensions):
             mean = 0
-            std_dev = 1.0
+            std_dev = 5.0
             self.__pbest = (np.zeros(dimensions), 0)
             self.__speed = np.random.normal(mean, std_dev, dimensions)
             self.__position = np.random.normal(mean, std_dev, dimensions)

@@ -1,6 +1,8 @@
 import sys
+import uuid
 import numpy as np
 import pandas as pd
+import pyswarms as ps
 from scipy.spatial.distance import mahalanobis, euclidean
 from model.pso import ParticleSwarmOptimization
 
@@ -70,7 +72,89 @@ class NaiveBayesClassifier(object):
 		true_predictions += 1
 
 	return float(true_predictions), float(num_rows)
+    
+    def verify(self, test, unsupervised, source, feature_importances):
+        true_predictions = 0
+        num_rows = test.iloc[:,0].count()
+        
+        x = {}
+	for class_id in self.__classes:
+            c = {}
+            prototypes = [self.abduct(class_id).values]
+            prototypes = prototypes + unsupervised.centroids_by_label(class_id) 
+            for prototype in prototypes:
+                c[str(uuid.uuid4())] = prototype
 
+	    x[str(class_id)] = c
+
+        def knn(k, sample, dataset):
+            distances = []
+            def sorter(v):
+                return v[1]
+
+            for class_id in dataset:
+                for t in dataset[class_id]:
+                    prototype = dataset[class_id][t]
+                    a = np.multiply(sample.values, feature_importances)
+                    b = np.multiply(prototype, feature_importances)
+                    
+                    distance = euclidean(a, b)
+                    measurement = (class_id, distance)
+                    distances.append(measurement)
+            
+            distances = sorted(distances, key=sorter)[:k]
+            distances = map(lambda x: x[0], distances)
+            return max(set(distances), key=distances.count)
+
+        for i in range(num_rows):
+            class_name = test.iloc[i,-1]
+            unclassified = test.iloc[i,:-1]
+            predicted = knn(3, unclassified, x)
+
+            if predicted == str(class_name):
+               true_predictions += 1
+        
+        print('{} {} ***************'.format(true_predictions, num_rows))
+        return float(true_predictions), float(num_rows)
+
+
+    def __verify(self, test, unsupervised, source, feature_importances):
+        true_predictions = 0
+        num_rows = test.iloc[:,0].count()
+
+        x = {}
+	for class_id in self.__classes:
+            # c = { 'a': self.abduct(class_id),
+            #       'b': unsupervised.centroid_by_label(class_id) }
+
+	    x[str(class_id)] = self.abduct(class_id)
+
+        for i in range(num_rows):
+            min_dist = None
+            sample = test.iloc[i,:]
+            unclassified = test.iloc[i,:-1]
+            class_name = test.iloc[i,-1]
+
+            for class_id in x:
+                prototype = x[class_id]
+                # a = np.multiply(unclassified.values, feature_importances)
+                # b = np.multiply(prototype.values, feature_importances)
+                a = unclassified.values
+                b = prototype.values
+                distance = euclidean(a, b)
+                
+                if min_dist is None or distance < min_dist[1]:
+                    min_dist = (class_id, distance)
+
+            # up = unsupervised.predict(unclassified)
+            # if not min_dist[0] == up:
+            #     if self.predict(unclassified)[0] == class_name:
+            #         true_predictions += 1
+            if min_dist[0] == str(class_name):
+               true_predictions += 1
+        
+        print('{} {} ***************'.format(true_predictions, num_rows))
+        return float(true_predictions), float(num_rows)
 
     def evaluate_abduction(self, test):
 	true_predictions = 0
@@ -98,9 +182,30 @@ class NaiveBayesClassifier(object):
         
 	return float(true_predictions), float(num_rows)
 
+    def abduct_multiple(self, class_id, k):
+        prototypes = []
+       
+        def optimization_function(x):
+            def reducer(a, b):
+                return a + euclidean(x, b)
 
+            p = len(prototypes) + 1.0
+            dataframe = pd.Series(data=x, index=self.__labels)
+            target = self.__inverse_run(class_id, dataframe)
+            distances = reduce(reducer, prototypes, 1)
+
+            return target * distances
+
+        for i in range(k):
+            pso = ParticleSwarmOptimization(dimensions=self.__dimensions) 
+            sample, value = pso.optimize(objective_function=optimization_function)
+            print(value)
+            prototypes.append(sample)
+            
+        return map(lambda x: pd.Series(data=x, index=self.__labels), prototypes)
+        
     def abduct(self, class_id):
-	def optimization_function(x):
+        def optimization_function(x):
 	    dataframe = pd.Series(data=x, index=self.__labels)
 			
 	    other_classes = 0
@@ -109,13 +214,14 @@ class NaiveBayesClassifier(object):
 
 	    for other_class_id in other_classes_id:
 		other_classes += self.__inverse_run(other_class_id, dataframe)
-
-		return target - other_classes
+            
+	    return target - other_classes
 
 	pso = ParticleSwarmOptimization(dimensions=self.__dimensions)
-	sample, _ = pso.optimize(objective_function=optimization_function)
-		
-	return pd.Series(data=sample, index=self.__labels)
+	sample, value = pso.optimize(objective_function=optimization_function)
+        
+        print(sample, value)
+        return pd.Series(data=sample, index=self.__labels)
 
     def __inverse_run(self, class_id, sample):
 	r = 1		# Probability of X
@@ -157,4 +263,4 @@ class NaiveBayesClassifier(object):
 
 	# return the classification output and the probability for each class
 	return max_probability_class, result
-
+    
